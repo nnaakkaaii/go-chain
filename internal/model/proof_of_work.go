@@ -11,7 +11,7 @@ import (
 
 var maxNonce = math.MaxInt64
 
-const targetBits = 24
+const targetBits = 18
 
 type ProofOfWork struct {
 	block  *Block
@@ -61,4 +61,14 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	fmt.Print("\n\n")
 
 	return nonce, hash[:]
+}
+
+func (pow *ProofOfWork) Validate() bool {
+	var hashInt big.Int
+
+	data := pow.prepareData(pow.block.Nonce)
+	hash := sha256.Sum256(data)
+	hashInt.SetBytes(hash[:])
+
+	return hashInt.Cmp(pow.target) == -1
 }
