@@ -59,7 +59,7 @@ func HashPubKey(pubKey []byte) []byte {
 	return publicRIPEMD160
 }
 
-// ValidateAddress check if address if valid
+// ValidateAddress check if address is valid
 func ValidateAddress(address string) bool {
 	pubKeyHash := base58.Base58Decode([]byte(address))
 	actualChecksum := pubKeyHash[len(pubKeyHash)-addressChecksumLen:]
