@@ -23,17 +23,18 @@ func main() {
 	flag.Var(&blockContents, "c", "specify multiple contents")
 	flag.Parse()
 
-	bc := model.NewBlockchain()
+	bc := model.CreateBlockchain("")
 
 	for _, content := range blockContents {
-		bc.AddBlock(content)
+		transactions := model.NewCoinbaseTx("Michael", content)
+		bc.AddBlock([]*model.Transaction{transactions})
 	}
 
 	i := bc.Iterate()
 	for {
 		b := i.Next()
 		fmt.Printf("Prev. hash: %x\n", b.PrevBlockHash)
-		fmt.Printf("Data: %s\n", b.Data)
+		fmt.Printf("Data: %x\n", b.HashTransactions())
 		fmt.Printf("Hash: %x\n", b.Hash)
 		pow := model.NewProofOfWork(b)
 		fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))

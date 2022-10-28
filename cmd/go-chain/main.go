@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	bc := model.NewBlockchain()
+	bc := model.CreateBlockchain("Ivan")
 	defer bc.DB.Close()
 
 	cli := commands.NewCLI(bc)

@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	dbFile       = "blockchain_%s.db"
-	blocksBucket = "blocks"
+	dbFile              = "blockchain_%s.db"
+	blocksBucket        = "blocks"
+	genesisCoinbaseData = "The Times 03/Jan/2009 Chancellor on brink of second bailout for banks"
 )
 
 // Blockchain is a database with a structure, ordered and back-linked.
@@ -17,7 +18,7 @@ type Blockchain struct {
 }
 
 // AddBlock will be used to add a new block to existing ones.
-func (bc *Blockchain) AddBlock(data string) {
+func (bc *Blockchain) AddBlock(transactions []*Transaction) {
 	var lastHash []byte
 
 	if err := bc.DB.View(func(tx *bolt.Tx) error {
@@ -28,7 +29,7 @@ func (bc *Blockchain) AddBlock(data string) {
 		panic(err)
 	}
 
-	newBlock := NewBlock(data, lastHash)
+	newBlock := NewBlock(transactions, lastHash)
 
 	if err := bc.DB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
@@ -49,12 +50,11 @@ func (bc *Blockchain) AddBlock(data string) {
 }
 
 // NewGenesisBlock creates a GenesisBlock, the first block in a chain.
-func NewGenesisBlock() *Block {
-	return NewBlock("Genesis Block", []byte{})
+func NewGenesisBlock(coinbase *Transaction) *Block {
+	return NewBlock([]*Transaction{coinbase}, []byte{})
 }
 
-// NewBlockchain creates a blockchain with the genesis block
-func NewBlockchain() *Blockchain {
+func CreateBlockchain(address string) *Blockchain {
 	var tip []byte
 
 	db, err := bolt.Open(fmt.Sprintf(dbFile, "1"), 0600, nil)
@@ -69,7 +69,9 @@ func NewBlockchain() *Blockchain {
 			tip = b.Get([]byte("l"))
 			return nil
 		}
-		genesis := NewGenesisBlock()
+
+		cbtx := NewCoinbaseTx(address, genesisCoinbaseData)
+		genesis := NewGenesisBlock(cbtx)
 
 		if b, err = tx.CreateBucket([]byte(blocksBucket)); err != nil {
 			return err
