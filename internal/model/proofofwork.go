@@ -4,20 +4,25 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"fmt"
-	"github.com/nnaakkaaii/go-chain/pkg/utils"
 	"math"
 	"math/big"
+
+	"github.com/nnaakkaaii/go-chain/pkg/casttype"
 )
 
-var maxNonce = math.MaxInt64
+var (
+	maxNonce = math.MaxInt64
+)
 
-const targetBits = 18
+const targetBits = 16
 
+// ProofOfWork represents a proof-of-work
 type ProofOfWork struct {
 	block  *Block
 	target *big.Int
 }
 
+// NewProofOfWork builds and returns a ProofOfWork
 func NewProofOfWork(b *Block) *ProofOfWork {
 	target := big.NewInt(1)
 	target.Lsh(target, uint(256-targetBits))
@@ -28,28 +33,34 @@ func NewProofOfWork(b *Block) *ProofOfWork {
 }
 
 func (pow *ProofOfWork) prepareData(nonce int) []byte {
-	return bytes.Join(
+	data := bytes.Join(
 		[][]byte{
 			pow.block.PrevBlockHash,
 			pow.block.HashTransactions(),
-			utils.IntToHex(pow.block.Timestamp),
-			utils.IntToHex(int64(targetBits)),
-			utils.IntToHex(int64(nonce)),
+			casttype.IntToHex(pow.block.Timestamp),
+			casttype.IntToHex(int64(targetBits)),
+			casttype.IntToHex(int64(nonce)),
 		},
 		[]byte{},
 	)
+
+	return data
 }
 
+// Run performs a proof-of-work
 func (pow *ProofOfWork) Run() (int, []byte) {
 	var hashInt big.Int
 	var hash [32]byte
 	nonce := 0
 
-	fmt.Printf("Mining the block containing '%x'\n", pow.block.HashTransactions())
+	fmt.Printf("Mining a new block")
 	for nonce < maxNonce {
 		data := pow.prepareData(nonce)
+
 		hash = sha256.Sum256(data)
-		fmt.Printf("\r%x", hash)
+		if math.Remainder(float64(nonce), 100000) == 0 {
+			fmt.Printf("\r%x", hash)
+		}
 		hashInt.SetBytes(hash[:])
 
 		if hashInt.Cmp(pow.target) == -1 {
@@ -63,6 +74,7 @@ func (pow *ProofOfWork) Run() (int, []byte) {
 	return nonce, hash[:]
 }
 
+// Validate validates block's PoW
 func (pow *ProofOfWork) Validate() bool {
 	var hashInt big.Int
 
@@ -70,5 +82,7 @@ func (pow *ProofOfWork) Validate() bool {
 	hash := sha256.Sum256(data)
 	hashInt.SetBytes(hash[:])
 
-	return hashInt.Cmp(pow.target) == -1
+	isValid := hashInt.Cmp(pow.target) == -1
+
+	return isValid
 }
