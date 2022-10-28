@@ -13,14 +13,14 @@ const (
 // Blockchain is a database with a structure, ordered and back-linked.
 type Blockchain struct {
 	tip []byte
-	db  *bolt.DB
+	DB  *bolt.DB
 }
 
 // AddBlock will be used to add a new block to existing ones.
 func (bc *Blockchain) AddBlock(data string) {
 	var lastHash []byte
 
-	if err := bc.db.View(func(tx *bolt.Tx) error {
+	if err := bc.DB.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 		lastHash = b.Get([]byte("l"))
 		return nil
@@ -30,7 +30,7 @@ func (bc *Blockchain) AddBlock(data string) {
 
 	newBlock := NewBlock(data, lastHash)
 
-	if err := bc.db.Update(func(tx *bolt.Tx) error {
+	if err := bc.DB.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(blocksBucket))
 
 		if err := b.Put(newBlock.Hash, newBlock.Serialize()); err != nil {
@@ -88,4 +88,34 @@ func NewBlockchain() *Blockchain {
 	}
 
 	return &Blockchain{tip, db}
+}
+
+type BlockchainIterator struct {
+	currentHash []byte
+	db          *bolt.DB
+}
+
+func (bc *Blockchain) Iterate() *BlockchainIterator {
+	return &BlockchainIterator{
+		currentHash: bc.tip,
+		db:          bc.DB,
+	}
+}
+
+func (i *BlockchainIterator) Next() *Block {
+	var block *Block
+
+	if err := i.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(blocksBucket))
+		encodedBlock := b.Get(i.currentHash)
+		block = DeserializeBlock(encodedBlock)
+
+		return nil
+	}); err != nil {
+		panic(err)
+	}
+
+	i.currentHash = block.PrevBlockHash
+
+	return block
 }
